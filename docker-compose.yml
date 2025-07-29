@@ -1,0 +1,53 @@
+version: '3.8'
+
+services:
+    app:
+        build:
+            context: .
+            dockerfile: Dockerfile
+        image: laravel-app
+        container_name: laravel-app
+        restart: unless-stopped
+        working_dir: /var/www
+        volumes:
+            - .:/var/www
+        ports:
+            - "8000:8000"
+        depends_on:
+            - db
+        networks:
+            - laravel
+
+    db:
+        image: postgres:15
+        container_name: laravel-db
+        restart: unless-stopped
+        environment:
+            POSTGRES_DB: blog_api
+            POSTGRES_USER: postgres
+            POSTGRES_PASSWORD: root
+        volumes:
+            - db-data:/var/lib/postgresql/data
+        ports:
+            - "5432:5432"
+        networks:
+            - laravel
+
+    artisan:
+        build:
+            context: .
+            dockerfile: Dockerfile
+        entrypoint: ["php", "/var/www/artisan"]
+        volumes:
+            - .:/var/www
+        depends_on:
+            - db
+        networks:
+            - laravel
+
+volumes:
+    db-data:
+
+networks:
+    laravel:
+        driver: bridge
