@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\PostFilterService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Http\Request;
@@ -10,37 +11,13 @@ use Illuminate\Routing\Controller;
 
 class PostsController extends Controller
 {
-    public function index(Request $request): LengthAwarePaginator
+    public function index(Request $request, PostFilterService $filterService): LengthAwarePaginator
     {
         $perPage = $request->query('per_page', 10);
+
         $query = Post::with('user')->latest();
 
-        $filterable = [
-            'user_id' => 'where',
-            'created_at' => 'whereDate',
-            'status' => 'where',
-            'title' => 'whereLike',
-        ];
-
-        foreach ($filterable as $field => $method) {
-            if ($request->filled($field)) {
-                $value = $request->query($field);
-
-                switch ($method) {
-                    case 'where':
-                        $query->where($field, $value);
-                        break;
-
-                    case 'whereDate':
-                        $query->whereDate($field, $value);
-                        break;
-
-                    case 'whereLike':
-                        $query->where($field, 'LIKE', "%$value%");
-                        break;
-                }
-            }
-        }
+        $query = $filterService->apply($request, $query);
 
         return $query->paginate($perPage);
     }
@@ -58,7 +35,9 @@ class PostsController extends Controller
             'user_id' => $request->user()->id,
         ]);
 
-        return response()->json($post, 201);
+        return response()->json([
+            'data' => $post
+        ], 201);
     }
 
     public function update(Request $request, $id): JsonResponse
@@ -72,7 +51,9 @@ class PostsController extends Controller
 
         $post->update($data);
 
-        return response()->json($post);
+        return response()->json([
+            'data' => $post
+        ]);
     }
 
     public function destroy($id): JsonResponse
